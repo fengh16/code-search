@@ -75,6 +75,27 @@ $Rep$表示一段代码。$TPairs(C)=\{(term_i, term_j|term_i,term_j\in termNode
 
 ## 1.3 Maybe Deep Neural Networks are the Best Choice for Modeling
 
+### 1.3.1 笔记
+
 使用单层GRU。分割token到subword，使用`</t>`代表token边界。对一个token内出现频率较高的subword对，执行合并操作。
+
+在从subword预测完整token的方法中，`predict`函数返回在当前subword序列下的候选subword及它们的可能性。使用了两个优先级队列，一个是`candidates`，对仍需探索的subword序列排名，另一个是`bestTokens`，包含目前找到的前k个最有可能的完整token。主循环从`candidates`中pop出前$b$个最好的，尝试扩展它们，并测试这些扩展的可能性。如果扩展是以`</t>`结尾的，则将他们添加到`bestTokens`中，否则添加到`candidates`中。直到遇到一些条件循环终止。
+
+### 1.3.2 问题
+
+- 单层GRU是否足够解决问题，有没有考虑多层？
+
+## 1.4 How To Create Natural Language Semantic Search For Arbitrary Objects With Deep Learning
+
+### 1.4.1 笔记
+
+只觉得的想法是将文字和代码通过两个encoder都映射到同一个向量空间中，再使用`cos`距离判断相似程度。我们使用与预训练模型，再微调它。
+
+分以下5个步骤：
+
+1. 获取并解析数据：Google将GitHub的开源数据存放在[BigQuery](https://cloud.google.com/bigquery/)。获取数据后，文件被解析成代码和文档对，其中代码被移除了注释（Python可以使用标注库`ast`完成）。而后将数据分为训练、验证和测试。
+2. 使用Seq2Seq建立一个代码摘要。
+
+### 1.4.2 问题
 
 # 2 想法

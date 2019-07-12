@@ -79,7 +79,7 @@ $Rep$表示一段代码。$TPairs(C)=\{(term_i, term_j|term_i,term_j\in termNode
 
 使用单层GRU。分割token到subword，使用`</t>`代表token边界。对一个token内出现频率较高的subword对，执行合并操作。
 
-在从subword预测完整token的方法中，`predict`函数返回在当前subword序列下的候选subword及它们的可能性。使用了两个优先级队列，一个是`candidates`，对仍需探索的subword序列排名，另一个是`bestTokens`，包含目前找到的前k个最有可能的完整token。主循环从`candidates`中pop出前$b$个最好的，尝试扩展它们，并测试这些扩展的可能性。如果扩展是以`</t>`结尾的，则将他们添加到`bestTokens`中，否则添加到`candidates`中。直到遇到一些条件循环终止。
+在从subword预测完整token的方法中（Beam Search），`predict`函数返回在当前subword序列下的候选subword及它们的可能性。使用了两个优先级队列，一个是`candidates`，对仍需探索的subword序列排名，另一个是`bestTokens`，包含目前找到的前k个最有可能的完整token。主循环从`candidates`中pop出前$b$个最好的，尝试扩展它们，并测试这些扩展的可能性。如果扩展是以`</t>`结尾的，则将他们添加到`bestTokens`中，否则添加到`candidates`中。直到遇到一些条件循环终止。
 
 ### 1.3.2 问题
 
@@ -101,12 +101,39 @@ $Rep$表示一段代码。$TPairs(C)=\{(term_i, term_j|term_i,term_j\in termNode
 
 ### 1.4.2 问题
 
-- 这篇文章讲解得非常清楚。要有问题的话，就是Seq2Seq和语言模型具体的实现是什么？
+- 这篇文章讲解得非常有条理。要有问题的话，就是Seq2Seq和语言模型具体的实现是什么？
 
 ## 1.5 Deep API Learning
 
 ### 1.5.1 笔记
 
+大致是将用户的输入作为源语言，API序列作为目标语言，使用基于attention的RNN Encoder-Decoder模型。
+
+使用基于IDF的权重来处理API重要程度不同的问题。$w_{idf}(y_t)=\log(\frac{N}{n_{y_t}})$，其中$N$是API序列总数，$n_{y_t}$是$y_t$出现的文件数目。新的损失函数即为$\mathrm{cost}_{it}=-\log p_\theta(y_{it}|x_i)-\lambda w_{idf}(y_t)$。
+
+数据集是从GitHub上获取的$\langle \text{API sequence},\text{annotation}\rangle$对。抽取API sequence时，遍历AST，将`new C()`转化为`C.new`，将`o.m()`（`o`是`C`的实例）转化为`C.m`。AST的遍历为后序。抽取annotation时，选择方法注释的第一句话作为总结。
+
+训练时，使用GRU变种作为RNN的结构。encoder使用了两个RNN，一个forward RNN编码源语句，一个backward RNN编码逆源语句。decoder也是一个RNN。所有的RNN都有1000个隐藏单元。单词嵌入的大小为120。使用Adadelta自动修改学习率。
+
+使用Beam Search的方法启发式地选择序列。
+
 ### 1.5.2 问题
+
+- Encoder为什么使用两个RNN？没看懂它们的用途。
+
+## 1.6 Deep Code Search
+
+### 1.6.1 笔记
+
+CODEnn将代码和自然语言映射到同一向量空间（Joint embedding）。在做序列嵌入的时候，使用了RNN，RNN的所有输出再经过最大池化。整个网络由如下3部分组成：
+- 代码嵌入网络（CoNN）：考虑3方面，方法名、API调用序列和token。方法名和API调用序列使用RNN，token使用多层感知机，所有的结果都经过最大池化。最后在经过单层全连层映射到向量空间，激活函数使用$\tanh$。
+- 描述嵌入网络（DeNN）：使用RNN和最大池化。
+- 相似度模块：使用cos距离。
+
+loss采用$L(\theta)=\sum\limits_{\langle C,D^+,D^-\rangle\in P}\max(0,\epsilon-\cos(\boldsymbol{c},\boldsymbol{d}^+)+\cos(\boldsymbol{c},\boldsymbol{d}^-))$。其中$\theta$是参数，$P$是数据集，$\boldsymbol{c},\boldsymbol{d}^+,\boldsymbol{d}^-$分别是代码向量，正例向量和反例向量。
+
+### 1.6.2 问题
+
+- token信息为什么不采用序列，使用RNN训练而是无序的，使用MLP训练？
 
 # 2 想法

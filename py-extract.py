@@ -2,6 +2,8 @@ import ast
 import glob
 import csv
 from os import path
+import re
+import sys
 from collections import deque
 
 class CallVisitor(ast.NodeVisitor):
@@ -20,10 +22,20 @@ class CallVisitor(ast.NodeVisitor):
 
 def extract(file):
     with open(file) as f:
-        module = ast.parse(f.read(), filename=file)
+        content = f.read()
+        module = ast.parse(content, filename=file)
+        lines = content.split('\n')
     result = []
     for node in ast.walk(module):
         if isinstance(node, ast.FunctionDef):
+            end = node.body[0].lineno - 1
+            prefix = re.match('^[ \t]+', lines[end]).group(0)
+            end += 1
+            while end < len(lines) and (not lines[end] or lines[end].startswith(prefix)):
+                end += 1
+            end -= 1
+            while end >= 0 and (not lines[end] or lines[end].isspace()):
+                end -= 1
             name = node.name
             api = []
             token = set()
@@ -37,22 +49,29 @@ def extract(file):
                     visitor = CallVisitor()
                     visitor.visit(subnode.func)
                     api.append('.'.join(visitor.names))
-            result.append((name, api, token, desc))
+            result.append((name, node.lineno, end + 1, api, token, desc))
     return result
 
-files = glob.glob('/home/public/py_github/**/*.py', recursive=True)
 
-with open("result.csv", "w") as out:
-    f = csv.writer(out)
-    f.writerow(['file', 'name', 'api', 'token', 'desc'])
-    for file in files:
-        if not path.isfile(file):
-            continue
-        print('Processing ' + file)
-        try:
-            feature = extract(file)
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("py-extract.py <input_path> <output_file>")
+        sys.exit()
+    files = glob.glob(path.join(sys.argv[1], '**/*.py'), recursive=True)
+    with open(sys.argv[2], "w") as out:
+        f = csv.writer(out)
+        f.writerow(['file', 'start', 'name', 'api', 'token', 'desc'])
+        for file in files:
+            if not path.isfile(file):
+                continue
+            print('Analyzing ' + file)
+            try:
+                feature = extract(file)
+            except:
+                print('Error ' + file)
+                continue
             for item in feature:
-                name, api, token, desc = item
-                f.writerow((file, name, '|'.join(api), '|'.join(token), desc))
-        except:
-            pass
+                name, start, end, api, token, desc = item
+                f.writerow((file, start, end, name,
+                            '|'.join(api), '|'.join(token), desc))
+            print('Finished ' + file)

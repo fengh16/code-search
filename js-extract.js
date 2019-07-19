@@ -3,7 +3,8 @@ const path = require('path');
 const util = require('util');
 const esprima = require('esprima');
 const walk = require( 'esprima-walk');
-const createCsvWriter = require('csv-writer').createObjectCsvWriter;  
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const process = require('process');
 
 const readdir = util.promisify(fs.readdir);
 const stat = util.promisify(fs.stat);
@@ -22,6 +23,9 @@ async function main(dir, out) {
     const csvWriter = createCsvWriter({  
         path: out,
         header: [
+            {id: 'file', title: 'file'},
+            {id: 'start', title: 'start'},
+            {id: 'end', title: 'end'},
             {id: 'name', title: 'name'},
             {id: 'api', title: 'api'},
             {id: 'token', title: 'token'},
@@ -89,6 +93,9 @@ async function main(dir, out) {
                 }
             }
             records.push({
+                file,
+                start: node.loc.start.line,
+                end: node.loc.end.line,
                 name,
                 api: api.join('|'),
                 token: Array.from(token).join('|'),
@@ -100,5 +107,7 @@ async function main(dir, out) {
     }
 }
 
-main('/home/public/js_github_2', 'js2.csv');
-// main('./data', 'js.csv');
+if (process.argv.length !== 4)
+    console.log('node js-extract.js <input_path> <output_file>')
+else
+    main(process.argv[2], process.argv[3])

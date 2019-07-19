@@ -1,23 +1,31 @@
-py-origin.csv: py-extract.py
+all: data/py/vocab.desc.pkl data/js/vocab.desc.pkl
+
+data/origin/py-origin.csv: py-extract.py
 	python3 $< /home/public/py_github $@
 
-js-origin-part1.csv: js-extract.js
+data/origin/js-origin-part1.csv: js-extract.js
 	node $< /home/public/js_github $@
 
-js-origin-part2.csv: js-extract.js
+data/origin/js-origin-part2.csv: js-extract.js
 	node $< /home/public/js_github_2 $@
 
-js-origin.csv: js-origin-part1.csv js-origin-part2.csv
+data/origin/js-origin.csv: data/origin/js-origin-part1.csv data/origin/js-origin-part2.csv
 	cat js-origin-part1.csv > $@
 	cat js-origin-part2.csv | tail -n +2 >> $@
 
-py-cleaned.csv: py-clean.py py-origin.csv
-	python3 $< py-origin.csv $@
+data/origin/py-cleaned.csv: py-clean.py data/origin/py-origin.csv
+	python3 $< data/origin/py-origin.csv $@
 
-js-cleaned.csv: js-clean.py js-origin.csv
-	python3 $< js-origin.csv $@
+data/origin/js-cleaned.csv: js-clean.py data/origin/js-origin.csv
+	python3 $< data/origin/js-origin.csv $@
 
-.PHONY: clean
+data/py/vocab.desc.pkl: transform.py data/origin/py-cleaned.csv
+	python3 $< data/origin/py-cleaned.csv data/py
+
+data/js/vocab.desc.pkl: transform.py data/origin/js-cleaned.csv
+	python3 $< data/origin/js-cleaned.csv data/js
+
+.PHONY: clean all
 
 clean:
 	rm -f *.csv

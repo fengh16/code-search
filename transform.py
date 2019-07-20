@@ -15,8 +15,8 @@ def build_vocab(series, num=10000):
     vocab_rev = list(vocab_num.items())
     vocab_rev.sort(key=lambda x: x[1], reverse=True)
     vocab_rev = list(map(lambda x: x[0], vocab_rev))
-    vocab_rev = vocab_rev[:num]
-    return {v: k + 1 for k, v in enumerate(vocab_rev)}, vocab_rev
+    vocab_rev = vocab_rev[:num - 2]
+    return {v: k + 2 for k, v in enumerate(vocab_rev)}, [''] + vocab_rev
 
 def save_to_h5(series, vocab, file):
     with tables.open_file(file, mode='w') as h5f:
@@ -34,7 +34,7 @@ def save_to_h5(series, vocab, file):
             index['length'] = length
             index['pos'] = pos
             index.append()
-            array.append(list(map(lambda x: vocab.get(x, 0), item)))
+            array.append(list(map(lambda x: vocab.get(x, 1), item)))
             pos += length
 
 def process(input, output):

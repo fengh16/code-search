@@ -4,6 +4,7 @@ import csv
 from os import path
 import re
 import sys
+from tqdm import tqdm
 from collections import deque
 
 class CallVisitor(ast.NodeVisitor):
@@ -61,17 +62,14 @@ if __name__ == "__main__":
     with open(sys.argv[2], "w") as out:
         f = csv.writer(out)
         f.writerow(['file', 'start', 'end', 'name', 'api', 'token', 'desc'])
-        for file in files:
+        for file in tqdm(files):
             if not path.isfile(file):
                 continue
-            print('Analyzing ' + file)
             try:
                 feature = extract(file)
             except:
-                print('Error ' + file)
                 continue
             for item in feature:
                 name, start, end, api, token, desc = item
                 f.writerow((file, start, end, name,
                             '|'.join(api), '|'.join(token), desc))
-            print('Finished ' + file)

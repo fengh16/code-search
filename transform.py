@@ -40,9 +40,9 @@ def save_to_h5(series, vocab, file):
 def process(input, output):
     if not os.path.exists(output):
         os.makedirs(output)
-    data = pd.read_csv(input, index_col=0)
-    data.replace('', np.nan, inplace=True)
-    data = data.dropna(how='any',axis=0)
+    origin_data = pd.read_csv(input)
+    data = origin_data.replace('', np.nan)
+    data = data.dropna()
     train, test = model_selection.train_test_split(data, test_size=0.2)
     validate, test = model_selection.train_test_split(test, test_size=0.5)
     series = [
@@ -51,7 +51,7 @@ def process(input, output):
         ('tokens', lambda x: x.token),
         ('desc', lambda x: x.desc)
     ]
-    tasks = [('train', train), ('valid', validate), ('test', test)]
+    tasks = [('train', train), ('valid', validate), ('test', test), ('use', data)]
     vocabs = [];
     for name, select in series:
         vocab, vocab_rev = build_vocab(select(data))

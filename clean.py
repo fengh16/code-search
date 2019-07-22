@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -43,7 +46,7 @@ def main(input, output):
     data.to_csv(output, index=False)
 
 if __name__ == '__main__':
-    parser= argparse.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('input', help='input csv that contains origin data')
     parser.add_argument('output', help='output csv that cleaned data is written to')
     args = parser.parse_args()

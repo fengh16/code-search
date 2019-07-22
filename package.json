@@ -11,6 +11,8 @@
   "dependencies": {
     "csv-writer": "^1.5.0",
     "esprima": "^4.0.1",
-    "esprima-walk": "^0.1.0"
+    "esprima-walk": "^0.1.0",
+    "progress": "^2.0.3",
+    "yargs": "^13.3.0"
   }
 }

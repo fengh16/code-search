@@ -1,10 +1,13 @@
+#!/usr/bin/env node
+
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const esprima = require('esprima');
 const walk = require('esprima-walk');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-const process = require('process');
+const yargs = require('yargs');
+const ProgressBar = require('progress');
 
 const readdir = util.promisify(fs.readdir);
 const stat = util.promisify(fs.stat);
@@ -40,14 +43,13 @@ async function main(dir, out) {
             {id: 'desc', title: 'desc'},
         ]
     });
+    const bar = new ProgressBar(':bar :percent :current/:total [:elapsed<:eta, :rate it/s]', {total: list.length});
     for (let file of list) {
         const content = await readFile(file, 'utf-8');
-        console.log('Analyzing ' + file);
         let ast;
         try {
             ast = esprima.parseModule(content, {loc:true, comment: true});
         } catch (err) {
-            console.log('Error ' + file);
             continue;
         }
         const comments = [];
@@ -129,11 +131,16 @@ async function main(dir, out) {
             });
         });
         await csvWriter.writeRecords(records);
-        console.log('Finished ' + file);
+        bar.tick();
     }
 }
 
-if (process.argv.length !== 4)
-    console.log('node js-extract.js <input_path> <output_file>')
+const argv = yargs
+    .usage('$0 <input_path> <output_file>')
+    .help()
+    .argv;
+if (argv._.length === 2)
+    main(argv._[0], argv._[1])
+        .catch(e => console.error(e));
 else
-    main(process.argv[2], process.argv[3])
+    yargs.showHelp();

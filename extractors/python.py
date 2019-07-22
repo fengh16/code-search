@@ -1,11 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import ast
 import glob
 import csv
 from os import path
 import re
-import sys
+import argparse
 from tqdm import tqdm
 from collections import deque
+import json
 
 class CallVisitor(ast.NodeVisitor):
     def __init__(self):
@@ -55,11 +59,12 @@ def extract(file):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("py-extract.py <input_path> <output_file>")
-        sys.exit()
-    files = glob.glob(path.join(sys.argv[1], '**/*.py'), recursive=True)
-    with open(sys.argv[2], "w") as out:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('input', help='input path that contains raw code')
+    parser.add_argument('output', help='output csv that extracted data is written to')
+    args = parser.parse_args()
+    files = glob.glob(path.join(args.input, '**/*.py'), recursive=True)
+    with open(args.output, "w") as out:
         f = csv.writer(out)
         f.writerow(['file', 'start', 'end', 'name', 'api', 'token', 'desc'])
         for file in tqdm(files):
@@ -72,4 +77,5 @@ if __name__ == "__main__":
             for item in feature:
                 name, start, end, api, token, desc = item
                 f.writerow((file, start, end, name,
-                            '|'.join(api), '|'.join(token), desc))
+                            '|'.join(api), '|'.join(token),
+                            json.dumps([desc] if desc else [])))

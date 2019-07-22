@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const esprima = require('esprima');
-const walk = require( 'esprima-walk');
+const walk = require('esprima-walk');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const process = require('process');
 
@@ -14,7 +14,15 @@ async function find(dir) {
     return (await Promise.all(
         (await readdir(dir))
             .map(x => path.join(dir, x))
-            .map(async x => (await stat(x)).isDirectory() ? await find(x) : x)
+            .map(async x => {
+                const type = await stat(x);
+                if (type.isDirectory())
+                    return await find(x);
+                else if (type.isFile())
+                    return x;
+                else
+                    return [];
+            })
     )).reduce((x, y) => x.concat(y), []);
 }
 
@@ -41,6 +49,23 @@ async function main(dir, out) {
         } catch (err) {
             console.log('Error ' + file);
             continue;
+        }
+        const comments = [];
+        for (let comment of ast.comments) {
+            const lastComment = comments[comments.length - 1];
+            if (lastComment && lastComment.type === 'Line' &&
+                    comment.type === 'Line' &&
+                    lastComment.end + 1 === comment.loc.start.line) {
+                lastComment.value += '\n' + comment.value;
+                lastComment.end = comment.loc.end.line;
+            } else {
+                comments.push({
+                    type: comment.type,
+                    value: comment.value,
+                    start: comment.loc.start.line,
+                    end: comment.loc.end.line
+                });
+            }
         }
         const records = [];
         walk(ast, node => {
@@ -85,12 +110,13 @@ async function main(dir, out) {
                     default:
                         break;
                 }
-            })
-            for (let comment of ast.comments) {
-                if (comment.loc.end.line + 1 === node.loc.start.line) {
-                    desc = comment.value;
-                    break;
-                }
+            });
+            let beforeComment, afterComment;
+            for (let comment of comments) {
+                if (comment.end + 1 === node.loc.start.line)
+                    beforeComment = comment.value;
+                else if (node.loc.start.line + 1 === comment.start)
+                    afterComment = comment.value;
             }
             records.push({
                 file,
@@ -99,7 +125,7 @@ async function main(dir, out) {
                 name,
                 api: api.join('|'),
                 token: Array.from(token).join('|'),
-                desc
+                desc: JSON.stringify([beforeComment, afterComment].filter(Boolean))
             });
         });
         await csvWriter.writeRecords(records);

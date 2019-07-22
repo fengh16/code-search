@@ -40,9 +40,10 @@ def save_to_h5(series, vocab, file):
 def process(input, output):
     if not os.path.exists(output):
         os.makedirs(output)
-    data = pd.read_csv(input, index_col=0)
-    data.replace('', np.nan, inplace=True)
-    data = data.dropna(how='any',axis=0)
+    origin_data = pd.read_csv(input)
+    origin_data.replace(np.nan, '', inplace=True)
+    data = origin_data.replace('', np.nan)
+    data = data.dropna()
     train, test = model_selection.train_test_split(data, test_size=0.2)
     validate, test = model_selection.train_test_split(test, test_size=0.5)
     series = [
@@ -51,10 +52,10 @@ def process(input, output):
         ('tokens', lambda x: x.token),
         ('desc', lambda x: x.desc)
     ]
-    tasks = [('train', train), ('valid', validate), ('test', test)]
+    tasks = [('train', train), ('valid', validate), ('test', test), ('use', origin_data)]
     vocabs = [];
     for name, select in series:
-        vocab, vocab_rev = build_vocab(select(data))
+        vocab, vocab_rev = build_vocab(select(origin_data))
         with open(os.path.join(output, 'vocab.%s.pkl' % name), 'wb') as f:
             pickle.dump(vocab, f)
         with open(os.path.join(output, 'vocabrev.%s.pkl' % name), 'wb') as f:
@@ -64,6 +65,8 @@ def process(input, output):
         for (series_name, select), vocab in zip(series, vocabs):
             save_to_h5(select(task), vocab, os.path.join(output,
                 '%s.%s.h5' % (task_name, series_name)))
+    origin_data[['file', 'start', 'end']].to_csv(os.path.join(output, 'use.codemap.csv'),
+                                                 index=False)
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

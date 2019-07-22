@@ -60,7 +60,7 @@ if __name__ == "__main__":
     files = glob.glob(path.join(sys.argv[1], '**/*.py'), recursive=True)
     with open(sys.argv[2], "w") as out:
         f = csv.writer(out)
-        f.writerow(['file', 'start', 'name', 'api', 'token', 'desc'])
+        f.writerow(['file', 'start', 'end', 'name', 'api', 'token', 'desc'])
         for file in files:
             if not path.isfile(file):
                 continue

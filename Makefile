@@ -13,10 +13,10 @@ data/origin/js-origin.csv: data/origin/js-origin-part1.csv data/origin/js-origin
 	cat js-origin-part1.csv > $@
 	cat js-origin-part2.csv | tail -n +2 >> $@
 
-data/origin/py-cleaned.csv: py-clean.py data/origin/py-origin.csv
+data/origin/py-cleaned.csv: clean.py data/origin/py-origin.csv
 	python3 $< data/origin/py-origin.csv $@
 
-data/origin/js-cleaned.csv: js-clean.py data/origin/js-origin.csv
+data/origin/js-cleaned.csv: clean.py data/origin/js-origin.csv
 	python3 $< data/origin/js-origin.csv $@
 
 data/py/vocab.desc.pkl: transform.py data/origin/py-cleaned.csv
@@ -28,6 +28,6 @@ data/js/vocab.desc.pkl: transform.py data/origin/js-cleaned.csv
 .PHONY: clean all
 
 clean:
-	rm -f *.csv
+	rm -rf data
 
 

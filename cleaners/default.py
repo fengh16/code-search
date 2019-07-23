@@ -9,6 +9,7 @@ import itertools
 import spacy
 import sys
 import argparse
+import json
 
 tqdm.pandas()
 split_name_regex = re.compile(r'(.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$))')
@@ -38,7 +39,7 @@ def main(input, output):
         re.sub(r'(\*| |\n)+', ' ', next(filter(None, x.split('\n\n')), '')).strip())
     nlp = spacy.load('en_core_web_lg')
     data.desc = data.desc.progress_apply(lambda x:
-        '|'.join([token.lemma_ for token in nlp(x)
+        '|'.join([token.lemma_ for token in nlp('\n'.join(json.loads(x)))
                   if token.is_alpha and not token.is_stop]))
     data.replace('', np.nan, inplace=True)
     data.desc.replace(np.nan, '', inplace=True)

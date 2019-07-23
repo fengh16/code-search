@@ -4,3 +4,7 @@ extracted/*
 !extracted/.gitkeep
 cleaned/*
 !cleaned/.gitkeep
+dataset/*
+!dataset/.gitkeep
+models/*
+!models/.gitkeep

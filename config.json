@@ -1,5 +1,9 @@
 {
     "extractors-dir": "./extractors",
+    "cleaners-dir": "./cleaners",
+    "transformers-dir": "./transformers",
     "data-rawcode-dir": "./data/rawcode",
-    "data-extracted-dir": "./data/extracted"
+    "data-extracted-dir": "./data/extracted",
+    "data-cleaned-dir": "./data/cleaned",
+    "data-transformed-dir": "./data/dataset"
 }

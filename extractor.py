@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import argparse
@@ -16,11 +16,15 @@ if __name__ == '__main__':
 
     extractors = {}
     for file in os.listdir(extractor_dir):
-        extractors[os.path.splitext(file)[0]] = os.path.join(extractor_dir, file)
+        full_path = os.path.join(extractor_dir, file)
+        if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+            extractors[os.path.splitext(file)[0]] = full_path
 
     dataset = {}
     for rawcode in os.listdir(data_rawcode_dir):
-        dataset[rawcode] = os.path.join(data_rawcode_dir, rawcode)
+        full_path = os.path.join(data_rawcode_dir, rawcode)
+        if os.path.isdir(full_path):
+            dataset[rawcode] = full_path
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--extractor', choices=list(extractors.keys()),

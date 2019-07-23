@@ -1,3 +1,6 @@
 rawcode/*
+!rawcode/.gitkeep
 extracted/*
+!extracted/.gitkeep
 cleaned/*
+!cleaned/.gitkeep

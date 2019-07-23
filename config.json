@@ -1,0 +1,5 @@
+{
+    "extractors-dir": "./extractors",
+    "data-rawcode-dir": "./data/rawcode",
+    "data-extracted-dir": "./data/extracted"
+}

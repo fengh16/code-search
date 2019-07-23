@@ -4,4 +4,4 @@ sklearn
 tqdm
 spacy
 tables
-
+torch

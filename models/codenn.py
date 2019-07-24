@@ -94,6 +94,7 @@ if __name__ == '__main__':
                         help='save model every numbers of epoch; 0 for disabling')
     parser.add_argument('--search_top_n', type=int, default=5,
                         help='search top-n results for search task')
+    parser.add_argument('--comment', default='', help='comment for tensorboard')
     args = parser.parse_args()
     assert args.dataset_path is not None or args.task in ['search'], \
         '%s task requires dataset' % args.task
@@ -123,7 +124,7 @@ if __name__ == '__main__':
         optimizer = Adam(model.parameters(), lr=args.learning_rate)
         if optimizer_state_dict is not None:
             optimizer.load_state_dict(optimizer_state_dict)
-        writer = SummaryWriter()
+        writer = SummaryWriter(comment=args.comment)
         step = 0
         for epoch in tqdm(range(args.load + 1, args.epoch + 1), desc='Epoch'):
             losses = []

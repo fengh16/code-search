@@ -40,4 +40,4 @@ class JointEmbedder(nn.Module):
         code_repr = self.forward_code(name, api, token)
         good_sim = F.cosine_similarity(code_repr, self.forward_desc(desc_good))
         bad_sim = F.cosine_similarity(code_repr, self.forward_desc(desc_bad))
-        return (self.margin - good_sim + bad_sim).clamp(min=1e-6).mean()
+        return (self.margin - good_sim + bad_sim).clamp(min=1e-6)

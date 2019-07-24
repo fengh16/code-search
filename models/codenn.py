@@ -18,6 +18,7 @@ import spacy
 from common.model.joint_embedder import JointEmbedder
 from common.dataset.code_search import CodeSearchDataset
 from common.eval import ACC, MAP, MRR, NDCG
+from common.data_parallel import MyDataParallel
 
 def eval(model, data_loader, device, pool_size, K):
     accs, mrrs, maps, ndcgs = [], [], [], []
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--learning_rate', type=float, default=0.001, help='learning rate')
     parser.add_argument('--log_every_iter', type=int, default=100,
                         help='log loss every numbers of iteration')
-    parser.add_argument('--valid_every_epoch', type=int, default=10,
+    parser.add_argument('--valid_every_epoch', type=int, default=5,
                         help='run validation every numbers of epoch; 0 for disabling')
     parser.add_argument('--save_every_epoch', type=int, default=10,
                         help='save model every numbers of epoch; 0 for disabling')
@@ -99,19 +100,19 @@ if __name__ == '__main__':
     assert args.load > 0 or args.task in ['train'], \
         "it's nonsense to %s on an untained model" % args.task
     if not os.path.exists(args.model_path):
-        os.path.mkdir(args.model_path)
+        os.mkdir(args.model_path)
     model = JointEmbedder(args.vocab_size, args.embed_size, args.repr_size,
                           args.pool, args.rnn, args.bidirectional == 'true',
                           args.activation, args.margin)
-    device = torch.device("cuda:%d" args.gpu[0] if args.gpu else "cpu")
+    model = MyDataParallel(model, device_ids=args.gpu if args.gpu else None)
+    device = torch.device("cuda:%d" % args.gpu[0] if args.gpu else "cpu")
     optimizer_state_dict = None
     if args.load > 0:
         print('loading from epoch.%04d.pth' % args.load)
         model_state_dict, optimizer_state_dict = torch.load(
-            os.path.join(args.model_path, 'epoch.%04d.pth' % args.load))
-        model.load_state_dict(model_state_dict, map_location='cpu')
-    if args.gpu:
-        model = nn.DataParallel(model, device_ids=args.gpu)
+            os.path.join(args.model_path, 'epoch.%04d.pth' % args.load),
+            map_location='cpu')
+        model.load_state_dict(model_state_dict)
     model.to(device)
     if args.task == 'train':
         dataset = CodeSearchDataset(args.dataset_path, 'train', args.name_len, args.api_len,
@@ -124,11 +125,11 @@ if __name__ == '__main__':
             optimizer.load_state_dict(optimizer_state_dict)
         writer = SummaryWriter()
         step = 0
-        for epoch in tqdm(range(1, args.epoch + 1), desc='Epoch'):
+        for epoch in tqdm(range(args.load + 1, args.epoch + 1), desc='Epoch'):
             losses = []
             for iter, data in enumerate(tqdm(data_loader, desc='Iter'), 1):
-                data = list(map(lambda x: x.to(device), data))
-                loss = model(*data)
+                data = [x.to(device) for x in data]
+                loss = model(*data).mean()
                 losses.append(loss.item())
                 writer.add_scalar('train/loss', loss.item(), step)
                 optimizer.zero_grad()
@@ -157,7 +158,7 @@ if __name__ == '__main__':
                 writer.add_scalar('eval/ndcg', ndcg, epoch)
                 model.train()
             if args.save_every_epoch and epoch % args.save_every_epoch == 0:
-                print('saving to epoch.%04d.pth' % epoch)
+                tqdm.write('saving to epoch.%04d.pth' % epoch)
                 torch.save((model.state_dict(), optimizer.state_dict()),
                     os.path.join(args.model_path, 'epoch.%04d.pth' % epoch))
     elif args.task in ['valid', 'test']:
@@ -176,7 +177,7 @@ if __name__ == '__main__':
                                  shuffle=False, drop_last=False)
         vecs = None
         for data in tqdm(data_loader, desc='Repr'):
-            data = list(map(lambda x: x.to(device), data))
+            data = [x.to(device) for x in data]
             reprs = model.forward_code(*data).data.cpu().numpy()
             vecs = reprs if vecs is None else np.concatenate((vecs, reprs), 0)
         vecs = normalize(vecs)
@@ -188,7 +189,6 @@ if __name__ == '__main__':
         with open(os.path.join(args.model_path, 'use.codes.pkl'), 'rb') as f:
             reprs = pickle.load(f)
         code = pd.read_csv(os.path.join(args.dataset_path, 'use.codemap.csv'))
-        print(reprs.shape[0], code.shape[0])
         assert reprs.shape[0] == code.shape[0], 'Broken data'
         with open(os.path.join(args.dataset_path, 'vocab.desc.pkl'), 'rb') as f:
             vocab = pickle.load(f)
@@ -203,6 +203,7 @@ if __name__ == '__main__':
             if len(words) == 0:
                 continue
             desc = torch.from_numpy(np.expand_dims(np.array(words), axis=0))
+            desc = desc.to(device)
             desc_repr = model.forward_desc(desc).data.cpu().numpy()
             sim = np.dot(reprs, desc_repr.transpose()).squeeze(axis=1)
             idx = np.argsort(sim)[:args.search_top_n]

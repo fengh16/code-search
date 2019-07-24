@@ -51,6 +51,7 @@ class SeqEncoder(nn.Module):
 
     def forward(self, input):
         embedded = F.dropout(self.embedding(input), 0.25, self.training)
+        self.rnn.flatten_parameters()
         rnn_output = F.dropout(self.rnn(embedded)[0], 0.25, self.training)
         return self.activation(self.pool(rnn_output, dim=1))
         

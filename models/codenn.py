@@ -8,9 +8,10 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim import Adam
-import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 import spacy
 
@@ -18,9 +19,11 @@ from common.model.joint_embedder import JointEmbedder
 from common.dataset.code_search import CodeSearchDataset
 from common.eval import ACC, MAP, MRR, NDCG
 
-def eval(model, data_loader, pool_size, K):
+def eval(model, data_loader, device, pool_size, K):
     accs, mrrs, maps, ndcgs = [], [], [], []
     for names, apis, tokens, descs, _ in tqdm(data_loader, desc='Valid'):
+        names, apis, tokens, descs = [tensor.to(device) for tensor in
+            (names, apis, tokens, descs)]
         code_repr = model.forward_code(names, apis, tokens)
         descs_repr = model.forward_desc(descs)
         for i in range(pool_size):
@@ -54,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_path', help='path for saving models and codes',
                         required=True)
     parser.add_argument('--gpu', type=lambda x: list(map(int, x.split(','))),
-                        default=0, help="GPU ids splited by `,'")
+                        default=[], help="GPU ids splited by `,'")
     parser.add_argument('--load', type=int, default=0,
                         help='load module training at give epoch')
     parser.add_argument('--vocab_size', type=int, default=10000, help='vocabulary size')
@@ -95,16 +98,21 @@ if __name__ == '__main__':
         '%s task requires dataset' % args.task
     assert args.load > 0 or args.task in ['train'], \
         "it's nonsense to %s on an untained model" % args.task
+    if not os.path.exists(args.model_path):
+        os.path.mkdir(args.model_path)
     model = JointEmbedder(args.vocab_size, args.embed_size, args.repr_size,
                           args.pool, args.rnn, args.bidirectional == 'true',
                           args.activation, args.margin)
-    if not os.path.exists(args.model_path):
-        os.path.mkdir(args.model_path)
+    device = torch.device("cuda:%d" args.gpu[0] if args.gpu else "cpu")
     optimizer_state_dict = None
     if args.load > 0:
         print('loading from epoch.%04d.pth' % args.load)
         model_state_dict, optimizer_state_dict = torch.load(
             os.path.join(args.model_path, 'epoch.%04d.pth' % args.load))
+        model.load_state_dict(model_state_dict, map_location='cpu')
+    if args.gpu:
+        model = nn.DataParallel(model, device_ids=args.gpu)
+    model.to(device)
     if args.task == 'train':
         dataset = CodeSearchDataset(args.dataset_path, 'train', args.name_len, args.api_len,
                                     args.token_len, args.desc_len)
@@ -118,7 +126,8 @@ if __name__ == '__main__':
         step = 0
         for epoch in tqdm(range(1, args.epoch + 1), desc='Epoch'):
             losses = []
-            for iter, data in enumerate(tqdm(itertools.islice(data_loader, 10), total=10, desc='Iter'), 1):
+            for iter, data in enumerate(tqdm(data_loader, desc='Iter'), 1):
+                data = list(map(lambda x: x.to(device), data))
                 loss = model(*data)
                 losses.append(loss.item())
                 writer.add_scalar('train/loss', loss.item(), step)
@@ -140,7 +149,7 @@ if __name__ == '__main__':
                                                    shuffle=True, drop_last=True)
                 model.eval()
                 acc, mrr, map, ndcg = eval(model, valid_data_loader,
-                    args.eval_pool_size, args.eval_k)
+                    device, args.eval_pool_size, args.eval_k)
                 tqdm.write('ACC=%f, MRR=%f, MAP=%f, nDCG=%f' % (acc, mrr, map, ndcg))
                 writer.add_scalar('eval/acc', acc, epoch)
                 writer.add_scalar('eval/mrr', mrr, epoch)
@@ -158,7 +167,7 @@ if __name__ == '__main__':
         data_loader = DataLoader(dataset=dataset, batch_size=args.eval_pool_size,
                                  shuffle=True, drop_last=True)
         print('ACC=%f, MRR=%f, MAP=%f, nDCG=%f' % eval(
-            model, data_loader, args.eval_pool_size, args.eval_k))
+            model, data_loader, device, args.eval_pool_size, args.eval_k))
     elif args.task == 'repr':
         model.eval()
         dataset = CodeSearchDataset(args.dataset_path, 'use', args.name_len,
@@ -167,6 +176,7 @@ if __name__ == '__main__':
                                  shuffle=False, drop_last=False)
         vecs = None
         for data in tqdm(data_loader, desc='Repr'):
+            data = list(map(lambda x: x.to(device), data))
             reprs = model.forward_code(*data).data.cpu().numpy()
             vecs = reprs if vecs is None else np.concatenate((vecs, reprs), 0)
         vecs = normalize(vecs)

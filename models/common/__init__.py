@@ -1,1 +1,1 @@
-__all__ = ['model', 'layer', 'dataset']
+__all__ = ['model', 'layer', 'dataset', 'eval']

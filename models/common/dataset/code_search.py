@@ -14,7 +14,6 @@ def pad_seq(seq, length):
 class CodeSearchDataset(data.Dataset):
     def __init__(self, data_path, task, name_len, api_len, token_len, desc_len=None):
         assert task in ['train', 'valid', 'test', 'use'], 'Invalid task option'
-        assert task != 'use' and desc_len is not None, 'Invalid description length'
         self.task = task
         self.name_len, self.api_len, self.token_len, self.desc_len = \
             name_len, api_len, token_len, desc_len
@@ -37,7 +36,7 @@ class CodeSearchDataset(data.Dataset):
         if task != 'use':
             assert self.name_idx.shape[0]==self.desc_idx.shape[0], 'Broken dataset'
         self.data_len = self.name_idx.shape[0]
-    
+
     def __getitem__(self, index):
         len, pos = self.name_idx[index]['length'], self.name_idx[index]['pos']
         name = self.name[pos:pos + len].astype('int64')

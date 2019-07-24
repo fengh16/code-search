@@ -5,3 +5,5 @@ tqdm
 spacy
 tables
 torch
+tensorboard
+tensorboardX

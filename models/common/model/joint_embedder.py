@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..layers.encoder import BOWEncoder, SeqEncoder
+from ..layer.encoder import BOWEncoder, SeqEncoder
 
 class JointEmbedder(nn.Module):
     def __init__(self, vocab_size, embed_size, repr_size,

@@ -1,1 +1,1 @@
-__all__ = ['joint_embedding']
+__all__ = ['joint_embedder', 'simple_embedder']

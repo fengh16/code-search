@@ -2,8 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import pickle
 import argparse
+import json
+import datetime
+import atexit
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -47,6 +51,13 @@ def normalize(data):
     return normalized_data
 
 if __name__ == '__main__':
+    running = {
+        'start': str(datetime.datetime.now()),
+        'end': None,
+        'argv': sys.argv,
+        'parameters': {},
+        'state': 'failed'
+    }
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", choices=["train", "valid", "test", "repr", "search"],
                         default='train', help="task to run; `train' for training the "
@@ -96,12 +107,25 @@ if __name__ == '__main__':
                         help='search top-n results for search task')
     parser.add_argument('--comment', default='', help='comment for tensorboard')
     args = parser.parse_args()
+    running['parameters'] = vars(args)
+    if not os.path.exists(args.model_path):
+        os.mkdir(args.model_path)
+    def save_running_log():
+        print('saving running log to running-log.json')
+        running['end'] = str(datetime.datetime.now())
+        filename = os.path.join(args.model_path, 'running-log.json')
+        all_running = []
+        if os.path.isfile(filename):
+            with open(filename, 'r') as f:
+                all_running = json.load(f)
+        all_running.insert(0, running)
+        with open(filename, 'w') as f:
+            json.dump(all_running, f, indent=2)
+    atexit.register(save_running_log)
     assert args.dataset_path is not None or args.task in ['search'], \
         '%s task requires dataset' % args.task
     assert args.load > 0 or args.task in ['train'], \
         "it's nonsense to %s on an untained model" % args.task
-    if not os.path.exists(args.model_path):
-        os.mkdir(args.model_path)
     model = JointEmbedder(args.vocab_size, args.embed_size, args.repr_size,
                           args.pool, args.rnn, args.bidirectional == 'true',
                           args.activation, args.margin)
@@ -115,6 +139,7 @@ if __name__ == '__main__':
             map_location='cpu')
         model.load_state_dict(model_state_dict)
     model.to(device)
+    running['state'] = 'interrupted'
     if args.task == 'train':
         dataset = CodeSearchDataset(args.dataset_path, 'train', args.name_len, args.api_len,
                                     args.token_len, args.desc_len)
@@ -213,3 +238,4 @@ if __name__ == '__main__':
                 print('==== %s:%d:%d ====' % (record['file'], record['start'], record['end']))
                 with open(record['file']) as f:
                     print(''.join(f.readlines()[record['start'] - 1:record['end']]))
+    running['state'] = 'succeeded'

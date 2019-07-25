@@ -2,23 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.init as weight_init
 import torch.nn.functional as F
-
-pool_choices = {
-    'max': lambda *args, **kwargs: torch.max(*args, **kwargs).values,
-    'mean': torch.mean,
-    'sum': torch.sum
-}
-
-rnn_choices = {
-    'lstm': nn.LSTM,
-    'gru': nn.GRU,
-    'rnn': nn.RNN
-}
-
-activations_choice = {
-    'relu': F.relu,
-    'tanh': torch.tanh
-}
+from ..choices import pool_choices, rnn_choices, activations_choices
 
 class BOWEncoder(nn.Module):
     def __init__(self, vocab_size, embed_size, pool='max', activation='tanh'):
@@ -26,8 +10,8 @@ class BOWEncoder(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embed_size)
         assert pool in pool_choices.keys(), 'Invalid pool option'
         self.pool = pool_choices[pool]
-        assert activation in activations_choice.keys(), 'Invalid activation option'
-        self.activation = activations_choice[activation]
+        assert activation in activations_choices.keys(), 'Invalid activation option'
+        self.activation = activations_choices[activation]
 
     def forward(self, input):
         embedded = F.dropout(self.embedding(input), 0.25, self.training)
@@ -46,12 +30,11 @@ class SeqEncoder(nn.Module):
                 weight_init.orthogonal_(w)
         assert pool in pool_choices.keys(), 'Invalid pool option'
         self.pool = pool_choices[pool]
-        assert activation in activations_choice.keys(), 'Invalid activation option'
-        self.activation = activations_choice[activation]
+        assert activation in activations_choices.keys(), 'Invalid activation option'
+        self.activation = activations_choices[activation]
 
     def forward(self, input):
         embedded = F.dropout(self.embedding(input), 0.25, self.training)
         self.rnn.flatten_parameters()
         rnn_output = F.dropout(self.rnn(embedded)[0], 0.25, self.training)
         return self.activation(self.pool(rnn_output, dim=1))
-        

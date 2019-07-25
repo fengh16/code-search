@@ -8,6 +8,7 @@ import os
 import sys
 import pickle
 import argparse
+import json
 from sklearn import model_selection
 
 def build_vocab(series, max_vocab_size):
@@ -16,13 +17,14 @@ def build_vocab(series, max_vocab_size):
     for i in series:
         for j in i:
             vocab_num[j] = vocab_num.get(j, 0) + 1
+    origin_vocab_size = len(vocab_num)
     vocab_rev = list(vocab_num.items())
     vocab_rev.sort(key=lambda x: x[1], reverse=True)
     vocab_rev = list(map(lambda x: x[0], vocab_rev))
     vocab_rev = vocab_rev[:max_vocab_size - 2]
     # 0: padding; 1: unknown; 2...: vocabulary
     return ({v: k + 2 for k, v in enumerate(vocab_rev)},
-            ['<PAD>', '<UNK>'] + vocab_rev)
+            ['<PAD>', '<UNK>'] + vocab_rev, origin_vocab_size)
 
 def save_to_h5(series, vocab, file):
     with tables.open_file(file, mode='w') as h5f:
@@ -59,22 +61,29 @@ def process(input, output, max_vocab_size):
         ('desc', lambda x: x.desc)
     ]
     tasks = [('train', train), ('valid', validate), ('test', test), ('use', origin_data)]
-    vocabs = [];
+    vocabs = []
+    statistics = {}
     for name, select in series:
-        vocab, vocab_rev = build_vocab(select(origin_data), max_vocab_size)
-        print('%s vocabulary size: %d' % (name, len(vocab_rev)))
+        vocab, vocab_rev, origin_vocab_size = build_vocab(select(origin_data), max_vocab_size)
+        statistics['%sOriginVocabSize' % name] = origin_vocab_size
+        statistics['%sVocabSize' % name] = len(vocab_rev)
+        print('%s origin vocab size: %d' % (name, origin_vocab_size))
+        print('%s processed vocab size: %d' % (name, len(vocab_rev)))
         with open(os.path.join(output, 'vocab.%s.pkl' % name), 'wb') as f:
             pickle.dump(vocab, f)
         with open(os.path.join(output, 'vocabrev.%s.pkl' % name), 'wb') as f:
             pickle.dump(vocab_rev, f)
         vocabs.append(vocab)
     for task_name, task in tasks:
+        statistics['%sDatasetSize' % task_name] = task.shape[0]
         print('%s set size: %d' % (task_name, task.shape[0]))
         for (series_name, select), vocab in zip(series, vocabs):
             if task_name == 'use' and series_name == 'desc':
                 continue
             save_to_h5(select(task), vocab, os.path.join(output,
                 '%s.%s.h5' % (task_name, series_name)))
+    with open(os.path.join(output, 'statistics.json'), 'w') as f:
+        json.dump(statistics, f, indent=2)
     origin_data[['file', 'start', 'end']].to_csv(os.path.join(output, 'use.codemap.csv'),
                                                  index=False)
 

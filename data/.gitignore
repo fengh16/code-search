@@ -8,3 +8,5 @@ dataset/*
 !dataset/.gitkeep
 models/*
 !models/.gitkeep
+pretrained/*
+!pretrained/.gitkeep

@@ -1,6 +1,6 @@
 import math
 
-def ACC(real,predict):
+def ACC(real, predict):
     sum = 0.0
     for val in real:
         try:
@@ -11,18 +11,18 @@ def ACC(real,predict):
             sum = sum + 1
     return sum / float(len(real))
 
-def MAP(real,predict):
+def MAP(real, predict):
     sum = 0.0
-    for id,val in enumerate(real):
+    for id, val in enumerate(real):
         try:
             index = predict.index(val)
         except ValueError:
             index = -1
         if index != -1:
-            sum = sum+(id + 1) / float(index + 1)
+            sum = sum + (id + 1) / float(index + 1)
     return sum / float(len(real))
 
-def MRR(real,predict):
+def MRR(real, predict):
     sum = 0.0
     for val in real:
         try:
@@ -33,10 +33,10 @@ def MRR(real,predict):
             sum = sum + 1.0 / float(index + 1)
     return sum / float(len(real))
 
-def NDCG(real,predict):
+def NDCG(real, predict):
     dcg = 0.0
     idcg = IDCG(len(real))
-    for i,predictItem in enumerate(predict):
+    for i, predictItem in enumerate(predict):
         if predictItem in real:
             itemRelevance = 1
             rank  =  i + 1

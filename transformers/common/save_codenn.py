@@ -36,7 +36,7 @@ def save_codenn_dataset(train, validate, test, origin_data,
     statistics = {}
     for name, select in series:
         vocab, vocab_rev, origin_vocab_size = build_vocab(origin_data[select],
-            max_vocab_size, unkown_idx)
+            max_vocab_size)
         statistics['%sOriginVocabSize' % name] = origin_vocab_size
         statistics['%sVocabSize' % name] = len(vocab_rev)
         with open(os.path.join(output_path, 'vocab.%s.pkl' % name), 'wb') as f:
@@ -50,7 +50,28 @@ def save_codenn_dataset(train, validate, test, origin_data,
             if task_name == 'use' and series_name == 'desc':
                 continue
             save_codenn_series(task[select], vocab, os.path.join(output_path,
-                '%s.%s.h5' % (task_name, series_name)))
+                '%s.%s.h5' % (task_name, series_name)), unkown_idx=unkown_idx)
+    with open(os.path.join(output_path, 'statistics.json'), 'w') as f:
+        json.dump(statistics, f, indent=2)
+    return statistics
+
+def save_codenn_dataset_with_vocab(train, validate, test, origin_data,
+                                   vocab, output_path, unkown_idx=1):
+    series = [
+        ('methname', 'name'),
+        ('apiseq', 'api'),
+        ('tokens', 'token'),
+        ('desc', 'desc')
+    ]
+    tasks = [('train', train), ('valid', validate), ('test', test), ('use', origin_data)]
+    statistics = {}
+    for task_name, task in tasks:
+        statistics['%sDatasetSize' % task_name] = task.shape[0]
+        for series_name, select in series:
+            if task_name == 'use' and series_name == 'desc':
+                continue
+            save_codenn_series(task[select], vocab, os.path.join(output_path,
+                '%s.%s.h5' % (task_name, series_name)), unkown_idx=unkown_idx)
     with open(os.path.join(output_path, 'statistics.json'), 'w') as f:
         json.dump(statistics, f, indent=2)
     return statistics

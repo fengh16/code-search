@@ -4,17 +4,20 @@ import numpy as np
 import tables
 import torch.utils.data as data
 
-def pad_seq(seq, length):
+def pad_seq(seq, length, pad_idx=0):
     if seq.shape[0] < length:
-        return np.append(seq, np.zeros((length - seq.shape[0],), dtype=seq.dtype))
+        return np.append(seq, np.full((length - seq.shape[0],),
+            pad_idx, dtype=seq.dtype))
     else:
         return seq[:length]
 
 
 class CodeSearchDataset(data.Dataset):
-    def __init__(self, data_path, task, name_len, api_len, token_len, desc_len=None):
+    def __init__(self, data_path, task, name_len, api_len,
+            token_len, desc_len=None, pad_idx=0):
         assert task in ['train', 'valid', 'test', 'use'], 'Invalid task option'
         self.task = task
+        self.pad_idx = pad_idx
         self.name_len, self.api_len, self.token_len, self.desc_len = \
             name_len, api_len, token_len, desc_len
         table_name = tables.open_file(os.path.join(data_path, '%s.methname.h5' % task))
@@ -40,23 +43,23 @@ class CodeSearchDataset(data.Dataset):
     def __getitem__(self, index):
         len, pos = self.name_idx[index]['length'], self.name_idx[index]['pos']
         name = self.name[pos:pos + len].astype('int64')
-        name = pad_seq(name, self.name_len)
+        name = pad_seq(name, self.name_len, pad_idx=self.pad_idx)
         len, pos = self.api_idx[index]['length'], self.api_idx[index]['pos']
         api = self.api[pos:pos+len].astype('int64')
-        api = pad_seq(api, self.api_len)
+        api = pad_seq(api, self.api_len, pad_idx=self.pad_idx)
         len, pos = self.token_idx[index]['length'], self.token_idx[index]['pos']
         token = self.token[pos:pos+len].astype('int64')
-        token = pad_seq(token, self.token_len)
+        token = pad_seq(token, self.token_len, pad_idx=self.pad_idx)
         if self.task != 'use':
             len, pos = self.desc_idx[index]['length'], self.desc_idx[index]['pos']
             desc_good = self.desc[pos:pos+len].astype('int64')
-            desc_good = pad_seq(desc_good, self.desc_len)
+            desc_good = pad_seq(desc_good, self.desc_len, pad_idx=self.pad_idx)
             rand_index = random.randint(0, self.data_len - 2)
             if rand_index == index:
                 rand_index = self.data_len - 1
             len, pos = self.desc_idx[rand_index]['length'], self.desc_idx[rand_index]['pos']
             desc_bad = self.desc[pos:pos+len].astype('int64')
-            desc_bad = pad_seq(desc_bad, self.desc_len)
+            desc_bad = pad_seq(desc_bad, self.desc_len, pad_idx=self.pad_idx)
             return name, api, token, desc_good, desc_bad
         else:
             return name, api, token

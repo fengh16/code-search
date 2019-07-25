@@ -12,8 +12,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from tensorboardX import SummaryWriter
@@ -21,29 +19,8 @@ import spacy
 
 from common.model.joint_embedder import JointEmbedder
 from common.dataset.code_search import CodeSearchDataset
-from common.eval import ACC, MAP, MRR, NDCG
+from common.eval import eval
 from common.data_parallel import MyDataParallel
-
-def eval(model, data_loader, device, pool_size, K):
-    accs, mrrs, maps, ndcgs = [], [], [], []
-    for names, apis, tokens, descs, _ in tqdm(data_loader, desc='Valid'):
-        names, apis, tokens, descs = [tensor.to(device) for tensor in
-            (names, apis, tokens, descs)]
-        code_repr = model.forward_code(names, apis, tokens)
-        descs_repr = model.forward_desc(descs)
-        for i in range(pool_size):
-            desc_repr = descs_repr[i].expand(pool_size, -1)
-            sims = F.cosine_similarity(code_repr, desc_repr).data.cpu().numpy()
-            negsims = np.negative(sims)
-            predict = np.argsort(negsims)
-            predict = predict[:K]
-            predict = [int(k) for k in predict]
-            real = [i]
-            accs.append(ACC(real, predict))
-            mrrs.append(MRR(real, predict))
-            maps.append(MAP(real, predict))
-            ndcgs.append(NDCG(real, predict))
-    return np.mean(accs), np.mean(mrrs), np.mean(maps), np.mean(ndcgs)
 
 def normalize(data):
     """normalize matrix by rows"""
@@ -231,11 +208,17 @@ if __name__ == '__main__':
             desc = torch.from_numpy(np.expand_dims(np.array(words), axis=0))
             desc = desc.to(device)
             desc_repr = model.forward_desc(desc).data.cpu().numpy()
-            sim = np.dot(reprs, desc_repr.transpose()).squeeze(axis=1)
+            sim = np.negate(np.dot(reprs, desc_repr.transpose()).squeeze(axis=1))
             idx = np.argsort(sim)[:args.search_top_n]
             for i in idx:
                 record = code.loc[i]
-                print('==== %s:%d:%d ====' % (record['file'], record['start'], record['end']))
-                with open(record['file']) as f:
-                    print(''.join(f.readlines()[record['start'] - 1:record['end']]).strip())
+                if 'code' in record.index:
+                    print('========')
+                    print(record['code'])
+                else:
+                    print('==== %s:%d:%d ====' % (record['file'],
+                        record['start'], record['end']))
+                    with open(record['file']) as f:
+                        print(''.join(f.readlines()[record['start'] -
+                            1:record['end']]).strip())
     running['state'] = 'succeeded'

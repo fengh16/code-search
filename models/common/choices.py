@@ -18,3 +18,8 @@ activations_choices = {
     'relu': F.relu,
     'tanh': torch.tanh
 }
+
+similarity_choices = {
+    'cos': lambda x, y: torch.neg(F.cosine_similarity(x, y)),
+    'l2': F.pairwise_distance
+}

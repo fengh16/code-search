@@ -29,4 +29,4 @@ class SimpleEmbedder(nn.Module):
     def forward(self, api, seq, token, desc):
         code_repr = self.forward_code(api, seq, token)
         desc_repr = self.forward_desc(desc)
-        return torch.mean((code_repr - desc_repr) ** 2, dim=1)
+        return F.pairwise_distance(code_repr, desc_repr)

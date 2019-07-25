@@ -4,6 +4,7 @@
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import os
 import re
 import itertools
 import spacy
@@ -19,8 +20,14 @@ def split_name(name):
     return list(itertools.chain(
         *[[i for i in m.group(0).split('_') if i] for m in matches]))
 
+loaders = {
+    '.csv': pd.read_csv,
+    '.pkl': pd.read_pickle
+}
+
 def main(input, output):
-    data = pd.read_csv(input)
+    ext = os.path.splitext(input)[1]
+    data = loaders[ext](input)
     data.replace('', np.nan, inplace=True)
     data.desc.replace(np.nan, '', inplace=True)
     data = data.dropna().drop_duplicates()
@@ -48,7 +55,7 @@ def main(input, output):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('input', help='input csv that contains origin data')
+    parser.add_argument('input', help='input csv/pickle that contains origin data')
     parser.add_argument('output', help='output csv that cleaned data is written to')
     args = parser.parse_args()
     main(args.input, args.output)

@@ -237,5 +237,5 @@ if __name__ == '__main__':
                 record = code.loc[i]
                 print('==== %s:%d:%d ====' % (record['file'], record['start'], record['end']))
                 with open(record['file']) as f:
-                    print(''.join(f.readlines()[record['start'] - 1:record['end']]))
+                    print(''.join(f.readlines()[record['start'] - 1:record['end']]).strip())
     running['state'] = 'succeeded'

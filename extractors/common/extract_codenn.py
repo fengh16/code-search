@@ -20,6 +20,7 @@ def extract(content):
     module = ast.parse(content)
     lines = content.split('\n')
     result = []
+    package_names = []
     for node in ast.walk(module):
         if isinstance(node, ast.FunctionDef):
             desc = ast.get_docstring(node)
@@ -53,5 +54,9 @@ def extract(content):
                     visitor = CallVisitor()
                     visitor.visit(subnode.func)
                     api.append('.'.join(visitor.names))
-            result.append((name, node.lineno, end + 1, api, token, desc))
+            result.append([name, node.lineno, end + 1, api, token, desc])
+        if isinstance(node, ast.Import):
+            for name in node.names:
+                package_names.append(name.name)
+    result = [tuple(r + [package_names]) for r in result]
     return result

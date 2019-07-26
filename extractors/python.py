@@ -18,7 +18,7 @@ if __name__ == "__main__":
     files = glob.glob(path.join(args.input, '**/*.py'), recursive=True)
     with open(args.output, "w") as out:
         f = csv.writer(out)
-        f.writerow(['file', 'start', 'end', 'name', 'api', 'token', 'desc'])
+        f.writerow(['file', 'start', 'end', 'name', 'api', 'token', 'desc', 'imported'])
         for file in tqdm(files):
             if not path.isfile(file):
                 continue
@@ -29,7 +29,7 @@ if __name__ == "__main__":
             except:
                 continue
             for item in feature:
-                name, start, end, api, token, desc = item
+                name, start, end, api, token, desc, imported = item
                 f.writerow((file, start, end, name,
                             '|'.join(api), '|'.join(token),
-                            json.dumps([desc] if desc else [])))
+                            json.dumps([desc] if desc else []), '|'.join(imported)))

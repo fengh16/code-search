@@ -41,12 +41,14 @@ async function main(dir, out) {
             {id: 'api', title: 'api'},
             {id: 'token', title: 'token'},
             {id: 'desc', title: 'desc'},
+            {id: 'imported', title: 'imported'}
         ]
     });
     const bar = new ProgressBar(':bar :percent :current/:total [:elapsed<:eta, :rate it/s]', {total: list.length});
     for (let file of list) {
         const content = await readFile(file, 'utf-8');
         let ast;
+        const imported_files = [];
         try {
             ast = esprima.parseModule(content, {loc:true, comment: true});
         } catch (err) {
@@ -75,7 +77,26 @@ async function main(dir, out) {
                 return;
             let name = "", api = [], token = new Set(), desc = "";
             let body;
-            switch (node.type) {
+            if (node.type === 'CallExpression') {
+                if (node.callee.type === 'Identifier' && node.callee.name === 'require' && node.arguments.length === 1) {
+                    if (node.arguments[0].value.indexOf('/') < 0) {
+                        imported_files.push(node.arguments[0].value);
+                    }
+                }
+            }
+            else if (node.type == 'ImportDeclaration') {
+                if (node.source.value.indexOf('/') < 0) {
+                imported_files.push(node.source.value);
+                node.specifiers.forEach(data => {if (data.type !== 'ImportNamespaceSpecifier') {
+                    if (data.imported) {
+                        imported_files.push(data.imported.name)
+                    } else {
+                        imported_files.push(data.local.name)}
+                    }
+                })
+            }
+        }
+        switch (node.type) {
                 case 'FunctionExpression':
                 case 'ArrowFunctionExpression':
                 case 'FunctionDeclaration':
@@ -127,9 +148,11 @@ async function main(dir, out) {
                 name,
                 api: api.join('|'),
                 token: Array.from(token).join('|'),
-                desc: JSON.stringify([beforeComment, afterComment].filter(Boolean))
+                desc: JSON.stringify([beforeComment, afterComment].filter(Boolean)),
+                imported: imported_files
             });
         });
+    records.forEach(record => record.imported = record.imported.join('|'))
         await csvWriter.writeRecords(records);
         bar.tick();
     }

@@ -20,9 +20,8 @@ def process(input, output, max_vocab_size):
         max_vocab_size, output)
     for k, v in statistics.items():
         print('%s: %d' % (k ,v))
-    origin_data.rename(columns={'original_function': 'code'}, inplace=True)
-    origin_data[['code']].to_csv(os.path.join(output, 'use.codemap.csv'),
-                                 index=False)
+    origin_data[['repo', 'path', 'start', 'url', 'code']] \
+        .to_csv(os.path.join(output, 'use.codemap.csv'), index=False)
 
 
 if __name__ == "__main__":

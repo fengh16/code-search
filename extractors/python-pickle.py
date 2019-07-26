@@ -13,7 +13,12 @@ tqdm.pandas()
 
 def main(input, output):
     data = pd.read_pickle(input)
-    data = data[['original_function']]
+    data.rename(columns={
+            'nwo': 'repo',
+            'lineno': 'start',
+            'original_function': 'code'
+        }, inplace=True)
+    data = data[['repo', 'path', 'start', 'url', 'code']]
     def extract_content(content):
         try:
             name, start, end, api, token, desc = extract(content)[0]
@@ -21,7 +26,7 @@ def main(input, output):
             return '', [], set(), ''
         return name, api, token, desc
     data['name'], data['api'], data['token'], data['desc'] = \
-        zip(*data.original_function.progress_map(extract_content))
+        zip(*data.code.progress_map(extract_content))
     data['api'] = data.api.map(lambda api: '|'.join(api))
     data['token'] = data.token.map(lambda token: '|'.join(token))
     data['desc'] = data.desc.map(lambda desc: json.dumps([desc] if desc else []))

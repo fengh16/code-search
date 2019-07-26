@@ -20,7 +20,7 @@ def save_codenn_series(series, vocab, file, unkown_idx=1):
             index['length'] = length
             index['pos'] = pos
             index.append()
-            array.append(map(lambda x: vocab.get(x, unkown_idx), item))
+            array.append(list(map(lambda x: vocab.get(x, unkown_idx), item)))
             pos += length
 
 def save_codenn_dataset(train, validate, test, origin_data,

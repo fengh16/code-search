@@ -55,7 +55,6 @@ def IDCG(n):
         idcg += (math.pow(2, itemRelevance) - 1.0) * (math.log(2) / math.log(i + 2))
     return idcg
 
-
 def eval(model, data_loader, device, pool_size, K, similarity='cos'):
     accs, mrrs, maps, ndcgs = [], [], [], []
     for names, apis, tokens, descs, _ in tqdm(data_loader, desc='Valid'):
@@ -67,7 +66,7 @@ def eval(model, data_loader, device, pool_size, K, similarity='cos'):
             desc_repr = descs_repr[i].expand(pool_size, -1)
             sims = similarity_choices[similarity](code_repr,
                 desc_repr).data.cpu().numpy()
-            predict = np.argsort(negsims)
+            predict = np.argsort(sims)
             predict = predict[:K]
             predict = [int(k) for k in predict]
             real = [i]

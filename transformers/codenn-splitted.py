@@ -19,7 +19,7 @@ def process(input, output, max_vocab_size):
     total.desc.replace(np.nan, '', inplace=True)
     train, validate, test, total = train.dropna(), \
         validate.dropna(), test.dropna(), total.dropna()
-    statistics = save_codenn_dataset(train, test, validate, total,
+    statistics = save_codenn_dataset(train, validate, test, total,
         max_vocab_size, output)
     for k, v in statistics.items():
         print('%s: %d' % (k ,v))

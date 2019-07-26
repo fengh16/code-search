@@ -21,7 +21,7 @@ def main(input, output):
     data = data[['repo', 'path', 'start', 'url', 'code']]
     def extract_content(content):
         try:
-            name, start, end, api, token, desc = extract(content)[0]
+            name, start, end, api, token, desc, imported = extract(content)[0]
         except SyntaxError:
             return '', [], set(), ''
         return name, api, token, desc

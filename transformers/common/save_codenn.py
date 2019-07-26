@@ -10,7 +10,7 @@ def save_codenn_series(series, vocab, file, unkown_idx=1):
             'length': tables.UInt32Col(),
             'pos': tables.UInt32Col()
         }, 'a table of indices and lengths')
-        array = h5f.create_earray('/', 'phrases', tables.Int16Atom(), (0,))
+        array = h5f.create_earray('/', 'phrases', tables.Int32Atom(), (0,))
         array.flavor = 'numpy'
         pos = 0
         for item in series:
@@ -20,7 +20,7 @@ def save_codenn_series(series, vocab, file, unkown_idx=1):
             index['length'] = length
             index['pos'] = pos
             index.append()
-            array.append(list(map(lambda x: vocab.get(x, unkown_idx), item)))
+            array.append(map(lambda x: vocab.get(x, unkown_idx), item))
             pos += length
 
 def save_codenn_dataset(train, validate, test, origin_data,

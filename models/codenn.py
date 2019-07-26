@@ -106,7 +106,7 @@ if __name__ == '__main__':
     model = JointEmbedder(args.vocab_size, args.embed_size, args.repr_size,
                           args.pool, args.rnn, args.bidirectional == 'true',
                           args.activation, args.margin)
-    model = MyDataParallel(model, device_ids=args.gpu if args.gpu else None)
+    model = MyDataParallel(model, device_ids=args.gpu)
     device = torch.device("cuda:%d" % args.gpu[0] if args.gpu else "cpu")
     optimizer_state_dict = None
     if args.load > 0:
@@ -208,7 +208,7 @@ if __name__ == '__main__':
             desc = torch.from_numpy(np.expand_dims(np.array(words), axis=0))
             desc = desc.to(device)
             desc_repr = model.forward_desc(desc).data.cpu().numpy()
-            sim = np.negate(np.dot(reprs, desc_repr.transpose()).squeeze(axis=1))
+            sim = np.negative(np.dot(reprs, desc_repr.transpose()).squeeze(axis=1))
             idx = np.argsort(sim)[:args.search_top_n]
             for i in idx:
                 record = code.loc[i]

@@ -20,7 +20,7 @@ import spacy
 from common.model.joint_embedder import JointEmbedder
 from common.dataset.code_search import CodeSearchDataset
 from common.eval import eval
-from common.data_parallel import MyDataParallel
+from common.data_parallel import MyDataParallel, NoDataParallel
 
 def normalize(data):
     """normalize matrix by rows"""
@@ -106,7 +106,10 @@ if __name__ == '__main__':
     model = JointEmbedder(args.vocab_size, args.embed_size, args.repr_size,
                           args.pool, args.rnn, args.bidirectional == 'true',
                           args.activation, args.margin)
-    model = MyDataParallel(model, device_ids=args.gpu)
+    if args.gpu:
+        model = MyDataParallel(model, device_ids=args.gpu)
+    else:
+        model = NoDataParallel(model)
     device = torch.device("cuda:%d" % args.gpu[0] if args.gpu else "cpu")
     optimizer_state_dict = None
     if args.load > 0:

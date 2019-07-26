@@ -12,8 +12,8 @@ def process(input, output, max_vocab_size):
     if not os.path.exists(output):
         os.makedirs(output)
     train = pd.read_csv(os.path.join(input, 'train.csv'))
-    validate = pd.read_csv(os.path.join(input, 'train.csv'))
-    test = pd.read_csv(os.path.join(input, 'train.csv'))
+    validate = pd.read_csv(os.path.join(input, 'valid.csv'))
+    test = pd.read_csv(os.path.join(input, 'test.csv'))
     train, validate, test = train.dropna(), validate.dropna(), test.dropna()
     origin_data = pd.concat((train, validate, test))
     statistics = save_codenn_dataset(train, test, validate, origin_data,

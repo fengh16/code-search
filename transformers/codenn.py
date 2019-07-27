@@ -18,7 +18,7 @@ def process(input, output, max_vocab_size):
     data = data.dropna()
     train, test = model_selection.train_test_split(data, test_size=0.2)
     validate, test = model_selection.train_test_split(test, test_size=0.5)
-    statistics = save_codenn_dataset(train, test, validate, origin_data,
+    statistics = save_codenn_dataset(train, validate, test, origin_data,
         max_vocab_size, output)
     for k, v in statistics.items():
         print('%s: %d' % (k ,v))

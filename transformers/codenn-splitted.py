@@ -23,7 +23,7 @@ def process(input, output, max_vocab_size):
         max_vocab_size, output)
     for k, v in statistics.items():
         print('%s: %d' % (k ,v))
-    train[['repo', 'path', 'start', 'url', 'code']] \
+    total[['repo', 'path', 'start', 'url', 'code']] \
         .to_csv(os.path.join(output, 'use.codemap.csv'), index=False)
 
 

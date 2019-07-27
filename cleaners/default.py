@@ -25,7 +25,7 @@ loaders = {
     '.pkl': pd.read_pickle
 }
 
-def main(input, output, no_desc):
+def main(input, output):
     ext = os.path.splitext(input)[1]
     data = loaders[ext](input)
     data.replace('', np.nan, inplace=True)
@@ -42,13 +42,12 @@ def main(input, output, no_desc):
         list(set(itertools.chain(
             *[[i.lower() for i in split_name(y) if not i.isdigit()]
                 for y in x.split('|')])))))
-    if not no_desc:
-        data.desc = data.desc.apply(lambda x:
-            re.sub(r'(\*| |\n)+', ' ', next(filter(None, x.split('\n\n')), '')).strip())
-        nlp = spacy.load('en_core_web_lg')
-        data.desc = data.desc.progress_apply(lambda x:
-            '|'.join([token.lemma_ for token in nlp('\n'.join(json.loads(x)))
-                    if token.is_alpha and not token.is_stop]))
+    data.desc = data.desc.apply(lambda x:
+        re.sub(r'(\*| |\n)+', ' ', next(filter(None, x.split('\n\n')), '')).strip())
+    nlp = spacy.load('en_core_web_lg')
+    data.desc = data.desc.progress_apply(lambda x:
+        '|'.join([token.lemma_ for token in nlp('\n'.join(json.loads(x)))
+            if token.is_alpha and not token.is_stop]))
     data.replace('', np.nan, inplace=True)
     data.desc.replace(np.nan, '', inplace=True)
     data = data.dropna()
@@ -58,7 +57,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('input', help='input csv/pickle that contains origin data')
     parser.add_argument('output', help='output csv that cleaned data is written to')
-    parser.add_argument('--no_desc', action='store_true',
-                        help='do not process description column')
     args = parser.parse_args()
-    main(args.input, args.output, args.no_desc)
+    main(args.input, args.output)

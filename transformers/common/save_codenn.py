@@ -4,7 +4,7 @@ import json
 import os
 from .build_vocab import build_vocab
 
-def save_codenn_series(series, vocab, file, unkown_idx=1):
+def save_codenn_series(series, vocab, file, unknown_idx=1):
     with tables.open_file(file, mode='w') as h5f:
         table = h5f.create_table('/', 'indices', {
             'length': tables.UInt32Col(),
@@ -20,11 +20,11 @@ def save_codenn_series(series, vocab, file, unkown_idx=1):
             index['length'] = length
             index['pos'] = pos
             index.append()
-            array.append(list(map(lambda x: vocab.get(x, unkown_idx), item)))
+            array.append(list(map(lambda x: vocab.get(x, unknown_idx), item)))
             pos += length
 
 def save_codenn_dataset(train, validate, test, origin_data,
-                        max_vocab_size, output_path, unkown_idx=1):
+                        max_vocab_size, output_path, unknown_idx=1):
     series = [
         ('methname', 'name'),
         ('apiseq', 'api'),
@@ -50,13 +50,13 @@ def save_codenn_dataset(train, validate, test, origin_data,
             if task_name == 'use' and series_name == 'desc':
                 continue
             save_codenn_series(task[select], vocab, os.path.join(output_path,
-                '%s.%s.h5' % (task_name, series_name)), unkown_idx=unkown_idx)
+                '%s.%s.h5' % (task_name, series_name)), unknown_idx=unknown_idx)
     with open(os.path.join(output_path, 'statistics.json'), 'w') as f:
         json.dump(statistics, f, indent=2)
     return statistics
 
 def save_codenn_dataset_with_vocab(train, validate, test, origin_data,
-                                   vocab, output_path, unkown_idx=1):
+                                   vocab, output_path, unknown_idx=1):
     series = [
         ('methname', 'name'),
         ('apiseq', 'api'),
@@ -71,7 +71,7 @@ def save_codenn_dataset_with_vocab(train, validate, test, origin_data,
             if task_name == 'use' and series_name == 'desc':
                 continue
             save_codenn_series(task[select], vocab, os.path.join(output_path,
-                '%s.%s.h5' % (task_name, series_name)), unkown_idx=unkown_idx)
+                '%s.%s.h5' % (task_name, series_name)), unknown_idx=unknown_idx)
     with open(os.path.join(output_path, 'statistics.json'), 'w') as f:
         json.dump(statistics, f, indent=2)
     return statistics

@@ -35,8 +35,8 @@ def save_codenn_dataset(train, validate, test, origin_data,
     vocabs = []
     statistics = {}
     for name, select in series:
-        vocab, vocab_rev, origin_vocab_size = build_vocab(origin_data[select],
-            max_vocab_size)
+        data = list(map(lambda x: x.split('|'), list(origin_data[select])))
+        vocab, vocab_rev, origin_vocab_size = build_vocab(data, max_vocab_size)
         statistics['%sOriginVocabSize' % name] = origin_vocab_size
         statistics['%sVocabSize' % name] = len(vocab_rev)
         with open(os.path.join(output_path, 'vocab.%s.pkl' % name), 'wb') as f:
@@ -47,27 +47,6 @@ def save_codenn_dataset(train, validate, test, origin_data,
     for task_name, task in tasks:
         statistics['%sDatasetSize' % task_name] = task.shape[0]
         for (series_name, select), vocab in zip(series, vocabs):
-            if task_name == 'use' and series_name == 'desc':
-                continue
-            save_codenn_series(task[select], vocab, os.path.join(output_path,
-                '%s.%s.h5' % (task_name, series_name)), unknown_idx=unknown_idx)
-    with open(os.path.join(output_path, 'statistics.json'), 'w') as f:
-        json.dump(statistics, f, indent=2)
-    return statistics
-
-def save_codenn_dataset_with_vocab(train, validate, test, origin_data,
-                                   vocab, output_path, unknown_idx=1):
-    series = [
-        ('methname', 'name'),
-        ('apiseq', 'api'),
-        ('tokens', 'token'),
-        ('desc', 'desc')
-    ]
-    tasks = [('train', train), ('valid', validate), ('test', test), ('use', origin_data)]
-    statistics = {}
-    for task_name, task in tasks:
-        statistics['%sDatasetSize' % task_name] = task.shape[0]
-        for series_name, select in series:
             if task_name == 'use' and series_name == 'desc':
                 continue
             save_codenn_series(task[select], vocab, os.path.join(output_path,

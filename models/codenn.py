@@ -16,7 +16,8 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 from tensorboardX import SummaryWriter
 import spacy
-
+import tornado.ioloop
+import tornado.web
 from common.model.joint_embedder import JointEmbedder
 from common.dataset.code_search import CodeSearchDataset
 from common.eval import eval
@@ -36,12 +37,13 @@ if __name__ == '__main__':
         'state': 'failed'
     }
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", choices=["train", "valid", "test", "repr", "search"],
-                        default='train', help="task to run; `train' for training the "
-                        "dataset; `valid'/`test' for evaluating model on corresponding "
-                        "dataset; `repr' for converting whole dataset(`use') to code "
-                        "`search' for searching in whole dataset, it require `repr' "
-                        "to run first")
+    parser.add_argument('--task', choices=['train', 'valid', 'test', 'repr', 'search',
+                        'serve'], default='train', help="task to run; `train' for "
+                        "training the dataset; `valid'/`test' for evaluating model "
+                        "on corresponding dataset; `repr' for converting whole "
+                        "dataset(`use') to code `search' for searching in whole "
+                        "dataset, it require `repr' to run first; `serve' for searching "
+                        "as web server, it require `repr' to run first")
     parser.add_argument('--dataset_path', help='path to the dataset')
     parser.add_argument('--model_path', help='path for saving models and codes',
                         required=True)
@@ -83,6 +85,8 @@ if __name__ == '__main__':
     parser.add_argument('--search_top_n', type=int, default=5,
                         help='search top-n results for search task')
     parser.add_argument('--comment', default='', help='comment for tensorboard')
+    parser.add_argument('--port', type=int, default=44062, help='port to serve at')
+    parser.add_argument('--host', default='0.0.0.0', help='address to serve at')
     args = parser.parse_args()
     running['parameters'] = vars(args)
     if not os.path.exists(args.model_path):
@@ -224,4 +228,50 @@ if __name__ == '__main__':
                     with open(record['file']) as f:
                         print(''.join(f.readlines()[record['start'] -
                             1:record['end']]).strip())
+    elif args.task == 'serve':
+        model.eval()
+        with open(os.path.join(args.model_path, 'use.codes.pkl'), 'rb') as f:
+            reprs = pickle.load(f)
+        code = pd.read_csv(os.path.join(args.dataset_path, 'use.codemap.csv'))
+        assert reprs.shape[0] == code.shape[0], 'Broken data'
+        with open(os.path.join(args.dataset_path, 'vocab.desc.pkl'), 'rb') as f:
+            vocab = pickle.load(f)
+        nlp = spacy.load('en_core_web_lg')
+        class MainHandler(tornado.web.RequestHandler):
+            def get(self):
+                query = self.get_query_argument('q')
+                count = int(self.get_query_argument('n', '5'))
+                results = []
+                words = [vocab.get(token.lemma_, 1) for token in nlp(query)
+                        if token.is_alpha and not token.is_stop]
+                if len(words):
+                    desc = torch.from_numpy(np.expand_dims(np.array(words), axis=0))
+                    desc = desc.to(device)
+                    desc_repr = model.forward_desc(desc).data.cpu().numpy()
+                    sim = np.negative(np.dot(reprs, desc_repr.transpose()).squeeze(axis=1))
+                    idx = np.argsort(sim)[:count]
+                    for i in idx:
+                        record = code.loc[i]
+                        if 'code' in record.index and 'url' in record.index:
+                            results.append({
+                                'code': record['code'],
+                                'url': record['url']
+                            })
+                        else:
+                            with open(record['file']) as f:
+                                results.append({
+                                    'code': ''.join(f.readlines()[record['start'] - 1:
+                                            record['end']]).strip()
+                                })
+                self.write(json.dumps({
+                    'query': query,
+                    'result': results
+                }))
+        app = tornado.web.Application([
+            (r'/search', MainHandler)
+        ])
+        print('start server at http://%s:%d' % (args.host, args.port))
+        app.listen(args.port, args.host)
+        tornado.ioloop.IOLoop.current().start()
+
     running['state'] = 'succeeded'

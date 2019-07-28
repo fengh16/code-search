@@ -42,32 +42,32 @@ def default_cleaner(text, fix_unicode=True, lowercase=True, transliterate=True,
         text = normalize_unicode(text, form='NFC')
     if transliterate is True:
         text = unidecode(text)
+    if lowercase is True:
+        text = text.lower()
     if no_urls:
-        text = replace_urls(text)
+        text = replace_urls(text, '<URL>')
     if no_emails is True:
-        text = replace_emails(text)
+        text = replace_emails(text, '<EMAIL>')
     if no_phone_numbers is True:
-        text = replace_phone_numbers(text)
+        text = replace_phone_numbers(text, '<PHONE>')
     if no_numbers is True:
-        text = replace_numbers(text)
+        text = replace_numbers(text, '<NUMBER>')
     if no_currency_symbols is True:
-        text = replace_currency_symbols(text)
+        text = replace_currency_symbols(text, '<CUR>')
     if no_contractions is True:
         text = unpack_contractions(text)
     if no_accents is True:
         text = remove_accents(text)
     if no_punct is True:
         text = remove_punctuation(text)
-    if lowercase is True:
-        text = text.lower()
     return normalize_whitespace(text)
 
 def default_tokenizer(text):
-    return text_to_word_sequence(text)
+    return text_to_word_sequence(text, filters='!"#$%&()*+,-./:;=?@[\\]^_`{|}~\t\n', lower=False)
 
 def ktext_process_text(series, cleaner=default_cleaner,
                        tokenizer=default_tokenizer,
                        append_indicators=False):
     if append_indicators:
-        return series.progress_map(lambda x: ['<SOS>'] + tokenizer(cleaner(x)) + ['EOS'])
+        return series.progress_map(lambda x: ['<SOS>'] + tokenizer(cleaner(x)) + ['<EOS>'])
     return series.progress_map(lambda x: tokenizer(cleaner(x)))

@@ -11,3 +11,4 @@ Keras-Preprocessing
 textacy
 unidecode
 tornado
+nltk

@@ -57,7 +57,7 @@ def IDCG(n):
 
 def eval(model, data_loader, device, pool_size, K, similarity='cos'):
     accs, mrrs, maps, ndcgs = [], [], [], []
-    for names, apis, tokens, descs, _ in tqdm(data_loader, desc='Valid'):
+    for names, apis, tokens, descs, _ in tqdm(data_loader, desc='Eval'):
         names, apis, tokens, descs = [tensor.to(device) for tensor in
             (names, apis, tokens, descs)]
         code_repr = model.forward_code(names, apis, tokens)

@@ -41,7 +41,7 @@ if __name__ == '__main__':
                         'serve'], default='train', help="task to run; `train' for "
                         "training the dataset; `valid'/`test' for evaluating model "
                         "on corresponding dataset; `repr' for converting whole "
-                        "dataset(`use') to code `search' for searching in whole "
+                        "dataset(`use') to code; `search' for searching in whole "
                         "dataset, it require `repr' to run first; `serve' for searching "
                         "as web server, it require `repr' to run first")
     parser.add_argument('--dataset_path', help='path to the dataset')

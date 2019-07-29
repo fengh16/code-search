@@ -29,6 +29,28 @@ async function find(dir) {
     )).reduce((x, y) => x.concat(y), []);
 }
 
+function getDocstring(comment) {
+    comment_lines = comment.split('\n')
+    let result = []
+    for (let comment_line of comment_lines) {
+        let trimed = comment_line.trim()
+        if (trimed.indexOf('*') == 0) {
+            line_data = trimed.slice(1).trim()
+            if (line_data.indexOf('@') == 0) {
+                console.log(result)
+                return result.join('\n')
+            }
+            if (line_data.length > 0) {
+                result.push(line_data)
+            }
+        }
+        else {
+            return ''
+        }
+    }
+    return ''
+}
+
 async function main(dir, out) {
     let list = (await find(dir)).filter(x => x.endsWith('.js'));
     const csvWriter = createCsvWriter({  
@@ -56,19 +78,16 @@ async function main(dir, out) {
         }
         const comments = [];
         for (let comment of ast.comments) {
-            const lastComment = comments[comments.length - 1];
-            if (lastComment && lastComment.type === 'Line' &&
-                    comment.type === 'Line' &&
-                    lastComment.end + 1 === comment.loc.start.line) {
-                lastComment.value += '\n' + comment.value;
-                lastComment.end = comment.loc.end.line;
-            } else {
-                comments.push({
-                    type: comment.type,
-                    value: comment.value,
-                    start: comment.loc.start.line,
-                    end: comment.loc.end.line
-                });
+            if (comment.type === 'Block') {
+                let docstring = getDocstring(comment.value)
+                if (docstring) {
+                    comments.push({
+                        type: comment.type,
+                        value: docstring,
+                        start: comment.loc.start.line,
+                        end: comment.loc.end.line
+                    });
+                }
             }
         }
         const records = [];

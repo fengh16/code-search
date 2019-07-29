@@ -34,11 +34,11 @@ function getDocstring(comment) {
     let result = []
     for (let comment_line of comment_lines) {
         let trimed = comment_line.trim()
-        if (trimed.indexOf('*') == 0) {
+        if (trimed && trimed.indexOf('*') == 0) {
             line_data = trimed.slice(1).trim()
             if (line_data.indexOf('@') == 0) {
-                console.log(result)
-                return result.join('\n')
+                if (result.length > 0)
+                    return result[0]
             }
             if (line_data.length > 0) {
                 result.push(line_data)
@@ -98,13 +98,13 @@ async function main(dir, out) {
             let body;
             if (node.type === 'CallExpression') {
                 if (node.callee.type === 'Identifier' && node.callee.name === 'require' && node.arguments.length === 1) {
-                    if (node.arguments[0].value.indexOf('/') < 0) {
+                    if (node.arguments[0].value && typeof(node.arguments[0].value) === "string" && node.arguments[0].value.indexOf('/') < 0) {
                         imported_files.push(node.arguments[0].value);
                     }
                 }
             }
             else if (node.type == 'ImportDeclaration') {
-                if (node.source.value.indexOf('/') < 0) {
+                if (node.source.value && typeof(node.source.value) === "string" && node.source.value.indexOf('/') < 0) {
                 imported_files.push(node.source.value);
                 node.specifiers.forEach(data => {if (data.type !== 'ImportNamespaceSpecifier') {
                     if (data.imported) {

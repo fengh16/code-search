@@ -61,6 +61,7 @@ def main(input, output):
     data = pd.read_csv(input)
     data.replace('', np.nan, inplace=True)
     data.desc.replace(np.nan, '', inplace=True)
+    data.imported.replace(np.nan, '', inplace=True)
     data = data.dropna().drop_duplicates()
     data.name = data.name.str.replace('$', '_')
     data = data[~data.name.str.startswith('_') & (data.name.str.len() > 2)]
